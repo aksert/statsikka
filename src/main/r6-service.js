@@ -353,7 +353,7 @@ function createR6Service(deps) {
     const oi = m.ownTeamIndex === 0 || m.ownTeamIndex === 1 ? m.ownTeamIndex : -1;
     const sc = (m.teams || []).map((t) => (t && Number.isFinite(t.score) ? t.score : 0));
     return {
-      name: m.name, ts: stats.tsOf(m), endTs: rank.matchEndMs(m, (records.get(m.name) || {}).lastMtime), map: m.map ? m.map.name : '', matchType: m.matchType ? m.matchType.name : '', gamemode: m.gamemode ? m.gamemode.name : '',
+      name: m.name, ts: stats.tsOf(m), endTs: rank.matchEndMs(m, (records.get(m.name) || {}).lastMtime), map: m.map ? m.map.name : '', matchType: stats.typeName(m), gamemode: m.gamemode ? m.gamemode.name : '',
       score: oi >= 0 ? [sc[oi] || 0, sc[1 - oi] || 0] : [sc[0] || 0, sc[1] || 0], ownPerspective: oi >= 0,
       result: m.name === activeName ? 'live' : stats.resultOf(m), roundsParsed: m.roundsParsed || (m.rounds ? m.rounds.length : 0),
       own: e ? {
@@ -403,7 +403,7 @@ function createR6Service(deps) {
     const oi = m.ownTeamIndex === 0 || m.ownTeamIndex === 1 ? m.ownTeamIndex : -1;
     const hasScore = players.some((p) => Number(p.score) > 0), hasAssists = players.some((p) => Number(p.assists) > 0);
     return {
-      name: m.name, ts: stats.tsOf(m), lastRoundTs: Date.parse(m.lastRoundTimestamp) || null, map: m.map || null, matchType: m.matchType || null,
+      name: m.name, ts: stats.tsOf(m), lastRoundTs: stats.wallTs(m.lastRoundTimestamp) || null, map: m.map || null, matchType: m.matchType ? { ...m.matchType, name: stats.typeName(m) } : null,
       gamemode: m.gamemode || null, gameVersion: m.gameVersion || '', roundsPerMatch: m.roundsPerMatch || 0,
       roundsParsed: m.roundsParsed || (m.rounds ? m.rounds.length : 0), teams: m.teams || [], ownTeamIndex: oi,
       result: m.name === activeName ? 'live' : stats.resultOf(m), rounds: m.rounds || [], roundWinners: stats.roundWinners(m),

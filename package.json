@@ -1,7 +1,7 @@
 {
   "name": "statsikka",
   "productName": "Statsikka",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Statsikka: pelitilastojen seuranta (Overwatch 2, Rocket League, Rainbow Six Siege ottelutallenteista)",
   "main": "src/main/main.js",
   "private": true,

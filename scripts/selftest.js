@@ -930,11 +930,14 @@ test('R6: syötteen validointi (IPC) ja providers/r6.assess', () => {
 const R6S = require('../src/main/r6-stats');
 const R6Svc = require('../src/main/r6-service');
 const R6ME = 'me-0000';
+const pad2 = (n) => String(n).padStart(2, '0');
+// Tallenteen aikaleima on paikallinen kellonaika 'Z':lla merkittynä: muotoillaan ms -> paikallinen seinäkello + 'Z'.
+const wallZ = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}Z`; };
 // Rakentaa ottelun yhteenvedon. ps: [profileID, teamIndex, kills, deaths, headshots, rounds]; rounds: [[score0, score1, winnerIdx, roleOfTeam0, roleOfTeam1]].
 function fxMatch(name, ts, type, mapName, ownTeam, scores, ps, rounds, extra = {}) {
   const winner = scores[0] > scores[1] ? 0 : scores[1] > scores[0] ? 1 : -1;
   return {
-    name, matchId: name, timestamp: new Date(ts).toISOString(), lastRoundTimestamp: new Date(ts + 60000).toISOString(), map: { name: mapName, id: mapName.length },
+    name, matchId: name, timestamp: wallZ(ts), lastRoundTimestamp: wallZ(ts + 60000), map: { name: mapName, id: mapName.length },
     matchType: { name: type, id: 1 }, gamemode: { name: 'Bomb', id: 1 }, roundsPerMatch: 6, roundsParsed: rounds.length, recordingProfileID: R6ME,
     teams: [0, 1].map((i) => ({ index: i, name: i === ownTeam ? 'YOUR TEAM' : 'ENEMY TEAM', score: scores[i], won: winner === i })),
     winnerTeamIndex: winner, ownTeamIndex: ownTeam, result: winner < 0 ? 'draw' : winner === ownTeam ? 'win' : 'loss',
@@ -1213,9 +1216,6 @@ test('R6 asetukset: sisäiset avaimet (r6AutoName, r6ReplayDir) eivät kelpaa IP
 
 // ---- R6: RP-muutos per ranked-ottelu (r6-rank, Arenyzen rank-historia) ------------------------------------------
 const R6RK = require('../src/main/r6-rank');
-const pad2 = (n) => String(n).padStart(2, '0');
-// Tallenteen aikaleima on paikallinen kellonaika 'Z':lla merkittynä: muotoillaan ms -> paikallinen seinäkello + 'Z'.
-const wallZ = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}Z`; };
 // Ottelu, joka päättyy hetkellä endMs: viimeisen kierroksen alku (paikallisena) = loppu - 4 min.
 function rkMatch(name, endMs, type = 'Ranked', own = true) {
   const m = fxMatch(name, endMs - 30 * 60000, type, 'Bank', 0, [2, 1], [[own ? R6ME : 'muu', 0, 5, 4, 2, 3], ['a', 1, 3, 3, 1, 3]], [[1, 0, 0, 'Attack', 'Defense']]);
@@ -1282,6 +1282,42 @@ test('R6 RP: aikaleima on paikallinen kellonaika Z:lla (ei UTC); mtime ensisijai
   assert.strictEqual(R6RK.matchEndMs({ timestamp: '2026-10-26T17:56:23Z' }, 0), new Date(2026, 9, 26, 17, 56, 23).getTime() + 4 * 60000, 'ilman lastRoundTimestampia: timestamp');
   assert.strictEqual(R6RK.matchEndMs({}, 12345), 12345, 'pelkkä mtime kelpaa');
   assert.strictEqual(R6RK.matchEndMs({}, 0), 0);
+});
+test('R6 aikaleima: wallTs / tsOf tulkitsevat Z:n paikalliseksi seinäkelloksi (ei riipu koneen aikavyöhykkeestä)', () => {
+  const exp = (y, mo, d, h, mi, sec) => new Date(y, mo - 1, d, h, mi, sec).getTime(); // paikallinen, ei kovakoodattua UTC-millisekuntia
+  assert.strictEqual(R6S.wallTs('2026-10-26T17:56:23Z'), exp(2026, 10, 26, 17, 56, 23));
+  assert.strictEqual(R6S.wallTs('2026-10-26T17:56:23'), exp(2026, 10, 26, 17, 56, 23), 'ilman Z:aa sama');
+  assert.strictEqual(R6S.wallTs('2026-10-26T17:56:23.000Z'), exp(2026, 10, 26, 17, 56, 23), 'millisekunnit ohitetaan');
+  assert.strictEqual(R6S.wallTs('2026-07-01T00:00:00Z'), exp(2026, 7, 1, 0, 0, 0), 'kesäaika');
+  assert.strictEqual(R6S.wallTs('2026-01-01T00:00:00Z'), exp(2026, 1, 1, 0, 0, 0), 'talviaika');
+  assert.ok(Number.isNaN(R6S.wallTs('roska')) && Number.isNaN(R6S.wallTs(undefined)) && Number.isNaN(R6S.wallTs('')));
+  const m = { timestamp: '2026-10-26T17:56:23Z' };
+  assert.strictEqual(R6S.tsOf(m), exp(2026, 10, 26, 17, 56, 23));
+  assert.strictEqual(R6S.tsOf({}), 0); assert.strictEqual(R6S.tsOf(null), 0); assert.strictEqual(R6S.tsOf({ timestamp: 'x' }), 0);
+  // Sama funktio r6-rankissa (ei kahta toteutusta) ja wallZ-kiertomatka
+  assert.strictEqual(R6RK.localWallMs, R6S.wallTs);
+  const t = new Date(2026, 9, 26, 17, 56, 23).getTime();
+  assert.strictEqual(R6S.wallTs(wallZ(t)), t);
+  // Järjestys säilyy (siirtymä on vakio): aikaisempi aikaleima on aina ennen
+  const sorted = R6S.sortChrono([{ name: 'b', players: [], timestamp: '2026-10-26T18:00:00Z' }, { name: 'a', players: [], timestamp: '2026-10-26T17:00:00Z' }, { name: 'c', players: [], timestamp: '2026-10-27T03:19:25Z' }]);
+  assert.deepStrictEqual(sorted.map((x) => x.name), ['a', 'b', 'c']);
+  // Vertailu oikeaan aikaan: tallenne, joka on alkanut paikallisesti 17:56 ja jonka tiedostot on kirjoitettu 17:58, ei ole "tulevaisuudessa" Date.now():iin nähden
+  const nowMs = exp(2026, 10, 26, 18, 0, 0);
+  assert.ok(R6S.tsOf(m) < nowMs && nowMs - R6S.tsOf(m) < 10 * 60000, 'ottelu ~4 min sitten, ei 2-3 h');
+});
+test('R6 ottelutyyppi 7: nimi taulukosta, vanha tallennettu "MatchType(7)" korjataan lukiessa, ryhmä "other"', () => {
+  const T6 = require('../src/main/r6/dissect/tables');
+  assert.strictEqual(T6.matchTypeName(7), T6.MATCH_TYPES[7]);
+  assert.ok(!T6.matchTypeName(7).startsWith('MatchType('));
+  assert.strictEqual(T6.matchTypeName(2), 'Ranked'); assert.strictEqual(T6.matchTypeName(99), 'MatchType(99)');
+  const old = { matchType: { name: 'MatchType(7)', id: 7 }, players: [] };
+  assert.strictEqual(R6S.typeName(old), T6.MATCH_TYPES[7]);
+  assert.strictEqual(R6S.typeName({ matchType: { name: 'MatchType(99)', id: 99 } }), 'MatchType(99)');
+  assert.strictEqual(R6S.typeName({ matchType: { name: 'Ranked', id: 1 } }), 'Ranked', 'tallennettu tunnettu nimi säilyy');
+  assert.strictEqual(R6S.typeName({}), ''); assert.strictEqual(R6S.typeName(null), '');
+  assert.strictEqual(R6S.typeKey(old), 'other');
+  for (const f of ['ranked', 'unranked', 'quick']) assert.strictEqual(R6S.matchesFilter(old, f), false);
+  assert.strictEqual(R6S.matchesFilter(old, 'all'), true);
 });
 test('R6 RP: delta löytyy oikeasta UTC-hetkestä, vaikka tallenteen "Z"-aikaleima on paikallista aikaa (mtime puuttuu)', () => {
   const end = Date.UTC(2026, 9, 26, 15, 30); // oikea UTC-hetki
@@ -1625,7 +1661,7 @@ test('R6 palvelu: live näyttää edellisen ottelun merkin, uusi ottelukansio ku
   assert.strictEqual(lv.match.players.find((p) => p.isOwn).prev, null);
   assert.strictEqual(svc.match('Match-3').prevMatch, null); // vain live-näkymä laskee merkin
   // uusi ottelu alkaa: ensimmäinen kierros uudessa kansiossa
-  const live = { ...ms[2], name: 'Match-5', matchId: 'Match-5', timestamp: new Date(R6T0 + 4 * R6HR).toISOString(), players: ms[2].players.filter((p) => p.profileID !== 'x') };
+  const live = { ...ms[2], name: 'Match-5', matchId: 'Match-5', timestamp: wallZ(R6T0 + 4 * R6HR), players: ms[2].players.filter((p) => p.profileID !== 'x') };
   const nf = path.join(folderDir, 'Match-5'); fs.mkdirSync(nf);
   handlers.round({ dir: nf, file: 'a-R01.rec', round: {}, match: { name: 'Match-5', summary: live, rounds: [], errors: [] } });
   await new Promise((r) => setTimeout(r, 80));

@@ -217,7 +217,10 @@ const OPERATOR_ROLES = {
 
 // 13 is not in upstream: single 5v5 round, free operator choice with repeated operators, respawns, team score = kills
 // (e.g. 79:62) -> a team deathmatch style arcade playlist (name inferred from replay data).
-const MATCH_TYPES = { 1: 'QuickMatch', 2: 'Ranked', 3: 'CustomGameLocal', 4: 'CustomGameOnline', 8: 'Standard', 9: 'Unranked', 13: 'TeamDeathmatch' };
+// 7 is not in upstream (upstream: 1-4, 8 Standard Y8S3~Y10S1, 9 Unranked Y10S2~). Seen in a Y11S3 recording: 5v5 Bomb, 6 rounds + 3 overtime
+// (same ruleset as Ranked) but a different playlistCategory than Ranked and not type 9 -> exact playlist unknown, so the name only describes
+// the data. Not 'Ranked' (no RP) and not 'Unranked' (unconfirmed) -> typeKey() 'other' = only in the 'Kaikki' filter.
+const MATCH_TYPES = { 1: 'QuickMatch', 2: 'Ranked', 3: 'CustomGameLocal', 4: 'CustomGameOnline', 7: 'Rankedin kaltainen (7)', 8: 'Standard', 9: 'Unranked', 13: 'TeamDeathmatch' };
 const GAME_MODES = { 327933806: 'Bomb', 1983085217: 'SecureArea', 2838806006: 'Hostage', 400168582901: 'QuickMatchBomb', 32905809967: 'TeamDeathmatch' };
 const MATCH_UPDATE_TYPES = ['Kill', 'Death', 'DefuserPlantStart', 'DefuserPlantComplete', 'DefuserDisableStart',
   'DefuserDisableComplete', 'LocateObjective', 'OperatorSwap', 'Battleye', 'PlayerLeave', 'Other'];

@@ -4,6 +4,7 @@
 // summary-olio + `name` (kansion nimi) + pelaajille valinnainen `opStats` [{ name, role, rounds, kills, deaths, headshots }].
 const susp = require('./suspicion');
 const advanced = require('./r6-advanced');
+const { MATCH_TYPES } = require('./r6/dissect/tables');
 
 const MATCH_FILTERS = ['all', 'ranked', 'unranked', 'quick'];
 const ROLLING_WINDOW = 10;
@@ -17,7 +18,26 @@ const hsOf = (h, k) => (k > 0 ? round1((h / k) * 100) : 0);
 const kprOf = (k, r) => (r > 0 ? round2(k / r) : 0);
 const ratio = (a, b) => (b > 0 ? round1((a / b) * 100) : null);
 
-const tsOf = (m) => Date.parse(m && m.timestamp) || 0;
+// AIKALEIMAT: tallenteen sisäinen `timestamp` / `lastRoundTimestamp` on pelikoneen PAIKALLINEN kellonaika, vaikka loppuun on merkitty 'Z'
+// (esim. kansio Match-2026-10-26_17-55-02 = klo 17.55 Suomen aikaa, tallenteen timestamp "2026-10-26T17:56:23Z" = oikea UTC olisi 15:56Z).
+// Date.parse() antaisi ajan, joka on UTC-eron (2-3 h) verran liian myöhäinen. Tässä Z ohitetaan ja merkkijono tulkitaan paikalliseksi
+// (new Date(v, k, p, h, min, s) huomioi kesä- ja talviajan oikein). Tarkistettu oikeasta datasta (47 ottelua): tiedoston mtime - paikallisena
+// tulkittu lastRoundTimestamp = 0-8 min joka ottelulle, kun taas Date.parse(timestamp) - mtime = 80-180 min (= UTC-ero).
+// Tallennettuja tietoja (r6-matches.json) ei muuteta: tulkinta tehdään vasta luettaessa. Palauttaa oikean UTC-epochin (ms) tai NaN.
+function wallTs(s) {
+  const m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.\d+)?Z?$/.exec(String(s || ''));
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : NaN;
+}
+const tsOf = (m) => wallTs(m && m.timestamp) || 0;
+
+// Ottelutyypin nimi: tallennettu nimi voi olla vanha "MatchType(N)" (jäsennin ei tuntenut id:tä silloin) -> haetaan nimi id:llä nykyisestä taulukosta.
+// Tallennettuun yhteenvetoon ei kosketa.
+function typeName(m) {
+  const mt = m && m.matchType;
+  if (!mt) return '';
+  const nm = mt.name || '';
+  return /^MatchType\(\d+\)$/.test(nm) && Number.isFinite(mt.id) && MATCH_TYPES[mt.id] ? MATCH_TYPES[mt.id] : nm;
+}
 function sortChrono(matches) {
   return (matches || []).filter((m) => m && Array.isArray(m.players)).slice()
     .sort((a, b) => tsOf(a) - tsOf(b) || String(a.name || '').localeCompare(String(b.name || '')));
@@ -25,7 +45,7 @@ function sortChrono(matches) {
 
 // 'ranked' | 'unranked' | 'quick' | 'other'
 function typeKey(m) {
-  const n = String((m && m.matchType && m.matchType.name) || '').toLowerCase();
+  const n = typeName(m).toLowerCase();
   if (n === 'ranked') return 'ranked';
   if (n === 'unranked' || n === 'standard') return 'unranked';
   if (n.startsWith('quick')) return 'quick';
@@ -71,7 +91,7 @@ function ownEntry(m, ownId) {
   return {
     name: m.name, ts: tsOf(m), result: resultOf(m), kills, deaths, assists: nz(p.assists), headshots: nz(p.headshots),
     rounds: nz(p.roundsPlayed), kd: kdOf(kills, deaths), hsPercent: hsOf(nz(p.headshots), kills), kost: kostOf(p),
-    map: m.map ? m.map.name : '', mapId: m.map ? m.map.id : null, type: m.matchType ? m.matchType.name : '',
+    map: m.map ? m.map.name : '', mapId: m.map ? m.map.id : null, type: typeName(m),
     own: m.ownTeamIndex, score: Array.isArray(m.teams) ? m.teams.map((t) => nz(t && t.score)) : [0, 0],
   };
 }
@@ -306,7 +326,7 @@ function playerMatches(matches, ownId, profileID) {
     const side = (m.ownTeamIndex === 0 || m.ownTeamIndex === 1) && (p.teamIndex === 0 || p.teamIndex === 1)
       ? (p.teamIndex === m.ownTeamIndex ? 'with' : 'against') : 'unknown';
     out.push({
-      name: m.name, ts: tsOf(m), map: m.map ? m.map.name : '', type: m.matchType ? m.matchType.name : '', result: resultOf(m), side,
+      name: m.name, ts: tsOf(m), map: m.map ? m.map.name : '', type: typeName(m), result: resultOf(m), side,
       username: p.username || '', kills: nz(p.kills), deaths: nz(p.deaths), assists: nz(p.assists), headshots: nz(p.headshots),
       hsPercent: hsOf(nz(p.headshots), nz(p.kills)), kd: kdOf(nz(p.kills), nz(p.deaths)), rounds: nz(p.roundsPlayed),
       score: Array.isArray(m.teams) ? m.teams.map((t) => nz(t && t.score)) : [0, 0], ownTeamIndex: m.ownTeamIndex,
@@ -389,7 +409,7 @@ function previousEncounters(prev, ownId) {
 }
 function previousInfo(prev) {
   if (!prev) return null;
-  return { name: prev.name, ts: tsOf(prev), map: prev.map ? prev.map.name : '', type: prev.matchType ? prev.matchType.name : '', result: resultOf(prev) };
+  return { name: prev.name, ts: tsOf(prev), map: prev.map ? prev.map.name : '', type: typeName(prev), result: resultOf(prev) };
 }
 
 // Yhden pelaajan koko profiili: indeksirivi + ottelulista + operaattorit + kartat (kaikki tallenteistasi).
@@ -429,5 +449,5 @@ function buildPlayerProfile(matches, ownId, key) {
 module.exports = {
   playerResult, playerScore, previousMatch, previousEncounters, previousInfo, buildPlayerProfile, playerKey,
   MATCH_FILTERS, SORTS, typeKey, matchesFilter, sortChrono, ownPlayer, ownEntry, roundWinners, aggregateOwn, buildPlayersIndex,
-  suspicionOf, listPlayers, playerMatches, operatorStatsByPlayer, kdOf, hsOf, kprOf, tsOf, resultOf, kostOf,
+  suspicionOf, listPlayers, playerMatches, operatorStatsByPlayer, kdOf, hsOf, kprOf, tsOf, wallTs, typeName, resultOf, kostOf,
 };

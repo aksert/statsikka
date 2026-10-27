@@ -7,15 +7,8 @@ const MAX_LAG_MS = 3 * 60 * 60 * 1000;   // historiapiste kelpaa vain, jos se on
 const LAST_ROUND_MS = 4 * 60 * 1000;      // viimeisen kierroksen alusta ottelun loppuun (mitattu: tiedoston mtime on 0-8 min, keskimäärin ~3,5 min kierroksen alun jälkeen)
 const MTIME_AGREE_MS = 20 * 60 * 1000;    // mtime hyväksytään vain, jos se vastaa paikallisaikaa tämän verran
 
-// AIKALEIMAT: tallenteen sisäinen `timestamp` / `lastRoundTimestamp` on pelikoneen PAIKALLINEN kellonaika, vaikka loppuun on merkitty 'Z'
-// (esim. kansio Match-2026-10-26_17-55-02 = klo 17.55 Suomen aikaa, tallenteen timestamp "2026-10-26T17:56:23Z" = oikea UTC olisi 15:56Z).
-// Siksi Date.parse() antaa ajan, joka on UTC-eron (2-3 h) verran liian myöhäinen. Tässä Z ohitetaan ja merkkijono tulkitaan paikalliseksi
-// (new Date(v, k, p, h, min, s) huomioi kesä- ja talviajan oikein). Tarkistettu oikeasta datasta (47 ottelua): mtime - paikallisena tulkittu
-// lastRoundTimestamp = 0-8 min joka ottelulle, kun taas Date.parse(timestamp) - mtime = 80-180 min (= UTC-ero).
-function localWallMs(s) {
-  const m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.\d+)?Z?$/.exec(String(s || ''));
-  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : NaN;
-}
+// AIKALEIMAT: tallenteen `timestamp` / `lastRoundTimestamp` on paikallista kellonaikaa 'Z':lla merkittynä -> tulkinta on r6-stats.js:n wallTs().
+const localWallMs = stats.wallTs;
 
 // Ottelun päättymisaika (ms, oikea UTC-epoch) tai 0. Luotettavin lähde on tallennetietueen lastMtime (tallennekansion uusimman
 // tiedoston muokkausaika = viimeisen kierroksen loppu, käyttöjärjestelmän UTC-aikaa). Se hyväksytään, kun se täsmää paikallisaikana tulkittuun
