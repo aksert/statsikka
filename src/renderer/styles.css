@@ -345,6 +345,24 @@ th.ops-cell, td.ops-cell { text-align: left; }
 .r6-filter { gap: 14px; }
 .r6-own .rv.big { font-size: 26px; }
 .r6-match-body { gap: 14px; }
+/* R6 Ottelut: ottelukortit (tuloksen värinen palkki vasemmassa reunassa) ja yhteenvetorivi */
+.r6-match-card { border-left: 5px solid var(--muted); }
+.r6-match-card.m-win { border-left-color: var(--good); }
+.r6-match-card.m-loss { border-left-color: var(--bad); }
+.r6-match-card.m-live { border-left-color: #5eead4; }
+.r6-match-head { grid-template-columns: minmax(0, 1.25fr) minmax(0, .85fr) minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px; }
+.rmc-mapname { font-size: 18px; font-weight: 700; line-height: 1.2; }
+.rmc-res { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.rmc-result { font-size: 16px; font-weight: 700; white-space: nowrap; }
+.rmc-result.na { color: var(--muted); } .rmc-result.live { color: #5eead4; }
+.rmc-kd { font-size: 15px; font-weight: 600; }
+.rmc-ops { line-height: 1.35; }
+.rp-chip { font-weight: 600; font-variant-numeric: tabular-nums; }
+.rp-chip.up { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--border)); background: color-mix(in srgb, var(--good) 12%, var(--surface2)); }
+.rp-chip.down { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); background: color-mix(in srgb, var(--bad) 12%, var(--surface2)); }
+.r6-match-summary { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 12px 16px; }
+.rs-l { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+.rs-v { font-size: 20px; font-weight: 700; margin-top: 2px; }
 .r6-rounds .site-cell { text-align: left; color: var(--muted); font-size: 12px; }
 table.t th.ops-cell { text-align: left; }
 tr.clickable { cursor: pointer; }

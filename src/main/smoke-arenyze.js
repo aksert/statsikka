@@ -31,9 +31,12 @@ function fullstatsFor(name) {
   }
   return j;
 }
+// rpHistory: [{ ts, rp }] korvaa fixturen rank-historian (fixturen ajat ovat 2025-10, eivät osu testiotteluihin): RP-chip-tarkistus rakentaa sen otteluista.
+let rpHistory = null;
 function profileFor(name) {
   const j = fixture('profile.json');
   j.player.nameOnPlatform = name;
+  if (rpHistory) j.history.data.history.data = rpHistory.map((p) => [new Date(p.ts).toISOString(), { displayName: 'Rank Points', metadata: { rank: 'EMERALD IV' }, value: p.rp, displayValue: String(p.rp), displayType: 'Number' }]);
   return j;
 }
 // Feikki fetch: kirjaa kutsut (path, name, platform, key) ja vastaa kuin Arenyze (401 väärällä avaimella).
@@ -371,6 +374,35 @@ exports.run = async function run(h) {
   await layoutAt('arenyze-oma-profiili', `${go('r6', 'Oma profiili')}; document.getElementById('view').scrollTop = 0; await window.__t.until(() => window.__t.vis().querySelector('.arz-section .arz-history .chart-svg'), 8000);`);
   await layoutAt('arenyze-asetuskortti', `${nav('settings')}; await window.__t.wait(500); document.querySelector('.arz-settings').scrollIntoView();`);
 
+  // ---------- F2. R6 > Ottelut: RP-muutos-chip omasta rank-historiasta ----------
+  // Fixturehistorian ajat (2025-10) eivät osu testiotteluihin, joten historia rakennetaan: yksi ranked-ottelu (tallenteista) + piste 10 min ennen sen loppua ja 5 min sen jälkeen.
+  if (r6On) {
+    const list = await ev('(async () => (await window.api.r6Matches({})).data.items.map((x) => ({ name: x.name, own: !!x.own, result: x.result, type: x.matchType, endTs: x.endTs })))()');
+    const target = (list || []).find((x) => x.own && x.type === 'Ranked' && x.result !== 'live' && x.endTs > 0);
+    if (!target) {
+      info('Arenyze: RP-chip-tarkistus ohitettu (koneen kolmen uusimman tallenteen joukossa ei ole omaa ranked-ottelua)');
+    } else {
+      rpHistory = [{ ts: target.endTs - 10 * 60000, rp: 3000 }, { ts: target.endTs + 5 * 60000, rp: 3023 }];
+      await ev('window.api.arenyzeClearCache()');
+      const before = nCalls('/v2/profile', (c) => c.name === 'SmokeR6');
+      await check('R6 > Ottelut: RP-muutos-chip (+23 RP, tooltip ennen → jälkeen) ja yhteenvedon RP yhteensä oman rank-historian perusteella', `(async () => {
+        ${NORM}
+        ${go('r6', 'Ottelut')}; const v = window.__t.vis();
+        if (!(await window.__t.until(() => v.querySelectorAll('.match-head').length >= 1, 8000))) return false;
+        if (!(await window.__t.until(() => v.querySelectorAll('.rp-chip').length === 1, 10000))) return false;
+        const chip = v.querySelector('.rp-chip'), card = chip.closest('.r6-match-card');
+        const sum = v.querySelector('.r6-match-summary');
+        return nz(chip.textContent) === '+23 RP' && chip.classList.contains('up') && card.querySelector('.match-head').dataset.name === ${JSON.stringify(target.name)} &&
+          /Arenyze/.test(chip.title) && /3\\s?000.*3\\s?023/.test(chip.title) && !!sum && nz(sum.textContent).includes('RP yhteensä') && nz(sum.textContent).includes('+23 RP');
+      })()`);
+      await snap('r6-ottelut-rp');
+      mainCheck('Arenyze: Ottelut haki oman rank-historian (profiili) kerran ja vain omalla nimellä', nCalls('/v2/profile', (c) => c.name === 'SmokeR6') === before + 1, `kutsuja ${nCalls('/v2/profile', (c) => c.name === 'SmokeR6') - before}`);
+      await ev('(async () => { await window.api.r6Matches({}); await window.api.r6Matches({ matchType: "ranked" }); return true; })()');
+      mainCheck('Arenyze: Ottelut-listan uudet kutsut käyttävät välimuistia (ei uutta profiilihakua)', nCalls('/v2/profile', (c) => c.name === 'SmokeR6') === before + 1, 'uusi profiilikutsu');
+      rpHistory = null;
+    }
+  }
+
   // ---------- G. Asetuskortti avaimen kanssa (kuvakaappaus), avaimen poisto ----------
   await ev(`(async () => { ${nav('settings')}; await window.__t.wait(500); const c = document.querySelector('.arz-settings'); c.scrollIntoView(); await window.__t.wait(200); return true; })()`);
   await snap('asetukset-arenyze');
@@ -401,6 +433,16 @@ exports.run = async function run(h) {
     PlayerPanel.close(); return ok;
   })()`);
   mainCheck('Arenyze: avaimen poiston jälkeen ei verkkokutsuja', stub.calls.length === afterClear, `uusia kutsuja ${stub.calls.length - afterClear}`);
+  if (r6On) {
+    await check('R6 > Ottelut: ilman Arenyze-avainta ei RP-chipejä eikä RP-yhteenvetoa (ei virheitä, ei hakuja)', `(async () => {
+      ${go('r6', 'Ottelut')}; const v = window.__t.vis();
+      if (!(await window.__t.until(() => v.querySelectorAll('.match-head').length >= 1, 8000))) return false;
+      await window.__t.wait(600);
+      const items = (await window.api.r6Matches({})).data.items;
+      return v.querySelectorAll('.rp-chip').length === 0 && !v.querySelector('.r6-match-summary').textContent.includes('RP yhteensä') && items.every((x) => x.rp === null) && !v.querySelector('.errbox');
+    })()`);
+    mainCheck('Arenyze: Ottelut-näkymä ei hakenut mitään ilman avainta', stub.calls.length === afterClear, `uusia kutsuja ${stub.calls.length - afterClear}`);
+  }
   await ev(`window.api.setSettings({ arenyzeAuto: true, arenyzeSoftLimit: 1800 })`);
   hooks.gepReset('r6');
   hooks.arzSetFetch(() => Promise.reject(new Error('savutesti: ei verkkokutsuja Arenyzeen')));

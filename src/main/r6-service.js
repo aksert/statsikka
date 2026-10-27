@@ -8,6 +8,7 @@ const { ApiError } = require('./http');
 const stats = require('./r6-stats');
 const susp = require('./suspicion');
 const advanced = require('./r6-advanced');
+const rank = require('./r6-rank');
 
 // Tallennusskeema: 2 = pelaajakohtaiset edistyneet tilastot (summary.players[].adv, r6-advanced.js). Vanhemmat tietueet jäsennetään
 // uudelleen taustalla, jos ottelukansio on vielä olemassa; muuten adv jää puuttumaan (UI näyttää "–").
@@ -331,25 +332,49 @@ function createR6Service(deps) {
     return { ownName: ownName(), hasOwn: !!id, active: !!activeName, ...stats.aggregateOwn(all(), id, { matchType: v.matchType, excludeName: excludeActive() }) };
   }
 
-  function listItem(m, id) {
+  // RP-muutokset (Arenyzen rank-historiasta, r6-rank.js): muistissa, kunnes tallenteet (rev) tai historia (taulukon viite) muuttuvat.
+  let rpMemo = null;
+  function rpDeltas(history) {
+    const id = ownId();
+    if (!id || !Array.isArray(history) || history.length < 2) return new Map();
+    if (rpMemo && rpMemo.rev === rev && rpMemo.history === history && rpMemo.id === id && rpMemo.active === activeName) return rpMemo.map;
+    const mtimes = {};
+    for (const [n, r] of records) if (r.lastMtime > 0) mtimes[n] = r.lastMtime;
+    const map = rank.attachRpDeltas(all(), history, { ownId: id, mtimes, excludeName: activeName });
+    rpMemo = { rev, history, id, active: activeName, map };
+    return map;
+  }
+
+  function listItem(m, id, rp) {
     const e = stats.ownEntry(m, id);
+    const op = e ? stats.ownPlayer(m, id) : null;
+    const adv = op ? advanced.finalize(op.adv) : null;
+    const delta = rp && rp.get(m.name);
     const oi = m.ownTeamIndex === 0 || m.ownTeamIndex === 1 ? m.ownTeamIndex : -1;
     const sc = (m.teams || []).map((t) => (t && Number.isFinite(t.score) ? t.score : 0));
     return {
-      name: m.name, ts: stats.tsOf(m), map: m.map ? m.map.name : '', matchType: m.matchType ? m.matchType.name : '', gamemode: m.gamemode ? m.gamemode.name : '',
+      name: m.name, ts: stats.tsOf(m), endTs: rank.matchEndMs(m, (records.get(m.name) || {}).lastMtime), map: m.map ? m.map.name : '', matchType: m.matchType ? m.matchType.name : '', gamemode: m.gamemode ? m.gamemode.name : '',
       score: oi >= 0 ? [sc[oi] || 0, sc[1 - oi] || 0] : [sc[0] || 0, sc[1] || 0], ownPerspective: oi >= 0,
       result: m.name === activeName ? 'live' : stats.resultOf(m), roundsParsed: m.roundsParsed || (m.rounds ? m.rounds.length : 0),
-      own: e ? { kills: e.kills, deaths: e.deaths, assists: e.assists, kd: e.kd, hsPercent: e.hsPercent, rounds: e.rounds, kost: e.kost } : null,
+      own: e ? {
+        kills: e.kills, deaths: e.deaths, assists: e.assists, kd: e.kd, hsPercent: e.hsPercent, rounds: e.rounds, kost: e.kost,
+        entryKills: adv ? adv.entryKills : null, entryDeaths: adv ? adv.entryDeaths : null,
+        clutchWins: adv ? adv.clutch.winsTotal : null, clutchAttempts: adv ? adv.clutch.attemptsTotal : null,
+        operators: (op.operators || []).filter((o) => o && o.name).map((o) => ({ name: o.name, rounds: o.rounds })),
+      } : null,
+      rp: delta || null, // { rpBefore, rpAfter, rpDelta } vain luotettavasti sovitetuille ranked-otteluille
       players: (m.players || []).length,
     };
   }
-  function matches(arg) {
+  // opts.rpHistory: oman Arenyze-profiilin rank-historia [{ ts, rp }] (main.js antaa välimuistista) tai puuttuu -> ei RP-muutoksia.
+  function matches(arg, opts = {}) {
     const v = validateMatchesArg(arg);
     const id = ownId();
+    const rp = rpDeltas(opts.rpHistory);
     const list = all().filter((m) => stats.matchesFilter(m, v.matchType)).slice().reverse();
     const pages = Math.max(1, Math.ceil(list.length / v.pageSize));
     const page = Math.min(v.page, pages);
-    return { total: list.length, page, pages, pageSize: v.pageSize, active: activeName, items: list.slice((page - 1) * v.pageSize, page * v.pageSize).map((m) => listItem(m, id)) };
+    return { total: list.length, page, pages, pageSize: v.pageSize, active: activeName, items: list.slice((page - 1) * v.pageSize, page * v.pageSize).map((m) => listItem(m, id, rp)) };
   }
 
   // Ottelun täysi näkymä: pelaajat historioineen ja arvioineen. Live-näkymä käyttää samaa rakennetta.

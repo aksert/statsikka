@@ -413,7 +413,27 @@ function registerIpc() {
   // --- Rainbow Six Siege: ottelutallenteet (Match Replay)
   handle('r6:status', () => r6svc.status());
   handle('r6:own', (arg) => r6svc.own(arg));
-  handle('r6:matches', (arg) => r6svc.matches(arg));
+  // Ottelulista + RP-muutos per ranked-ottelu oman Arenyze-profiilin rank-historiasta. Historia luetaan välimuistista; jos sitä ei ole tai se on vanhentunut,
+  // pyydetään päivitys taustalla samalla reitillä kuin automaattihaut (lookup 'auto': 6 h välimuisti, kuukauden pehmeä raja, automaattihaun kytkin ja
+  // epäonnistumisen jäähy). Ilman avainta tai nimeä ei haeta mitään eikä RP-muutoksia näytetä. Valmistuminen päivittää listan arenyze:update-ilmoituksella.
+  // Päivityspyyntö enintään kerran 10 min välein per nimi: epäonnistunut haku (esim. avain hylätty) ei saa ruokkia hakusilmukkaa ilmoituksen kautta.
+  const RP_PLATFORM = 'uplay';
+  const RP_ASK_MS = 10 * 60 * 1000;
+  let rpAsk = { key: '', at: 0 };
+  handle('r6:matches', (arg) => {
+    let history = null;
+    const name = String(settings.get().r6Name || '').trim();
+    if (arz && name && arz.configured()) {
+      const p = arz.peekProfile(name, RP_PLATFORM);
+      if (p) history = p.history;
+      const key = name.toLowerCase();
+      if ((!p || p.stale) && (rpAsk.key !== key || Date.now() - rpAsk.at >= RP_ASK_MS)) {
+        rpAsk = { key, at: Date.now() };
+        arz.lookup('profile', name, RP_PLATFORM, { origin: 'auto' }).catch(() => {});
+      }
+    }
+    return r6svc.matches(arg, { rpHistory: history });
+  });
   handle('r6:match', (name) => r6svc.match(name));
   handle('r6:live', () => {
     const d = r6svc.live();
@@ -439,7 +459,7 @@ function registerIpc() {
   handle('arenyze:test', (arg) => arz.testKey(ARZ.validateKeyArg(arg)));  // arg = { key } (testaa ja tallentaa onnistuessa) tai ei mitään (testaa tallennetun)
   handle('arenyze:clearKey', () => { arz.clearKey(); return arz.status(); });
   handle('arenyze:usage', () => arz.refreshUsage());
-  handle('arenyze:clearCache', () => { arz.clearCache(); return arz.status(); });
+  handle('arenyze:clearCache', () => { arz.clearCache(); rpAsk = { key: '', at: 0 }; return arz.status(); });
   handle('arenyze:lookup', async (arg) => {
     const v = ARZ.validateLookupArg(arg);
     // view = paneeli / oma profiili avautuu (noudattaa pehmeää rajaa), user = käyttäjän painike, refresh = Päivitä (ohittaa TTL:n, vähintään 30 s vanhasta)

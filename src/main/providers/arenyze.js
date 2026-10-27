@@ -507,6 +507,14 @@ function createArenyze(deps) {
     return { state: g.ok ? 'none' : (g.code === 'BUDGET' ? 'budget' : 'none'), message: g.ok ? '' : g.message };
   }
   const isFresh = (name, platform) => { const e = store.get(cacheKey('summary', platform, name)); return !!e && now() - e.at < TTL.summary; };
+  // Oman profiilin rank-historia välimuistista (ei verkkokutsua): { history: [{ ts, rp, rank }], fetchedAt, stale } tai null. Vaatii avaimen (ilman sitä mitään ei näytetä).
+  function peekProfile(nameIn, platform = 'uplay') {
+    const name = typeof nameIn === 'string' ? nameIn.trim() : '';
+    if (!name || !configured()) return null;
+    const hit = store.get(cacheKey('profile', platform, name));
+    if (!hit || !hit.data || !Array.isArray(hit.data.history)) return null;
+    return { history: hit.data.history, fetchedAt: hit.at, stale: now() - hit.at >= TTL.profile };
+  }
 
   // Käynnistää taustahaut rosterin pelaajille (vain jos avain on asetettu ja automaattihaku päällä). Sama pelaajajoukko ei laukaise uutta suunnitelmaa.
   function ensureRoster(roster, platform = 'uplay', source = 'default') {
@@ -568,7 +576,7 @@ function createArenyze(deps) {
   }
 
   return {
-    keys, configured, status, lookup, peek, decorate, ensureRoster, testKey, clearKey, usage: usageInfo,
+    keys, configured, status, lookup, peek, peekProfile, decorate, ensureRoster, testKey, clearKey, usage: usageInfo,
     refreshUsage: async () => { await refreshUsage(); notify(); return status(); },
     clearCache() { store.clearEntries(); failures.clear(); lastSigs.clear(); notify(); return true; },
     resetPlan() { lastSigs.clear(); },

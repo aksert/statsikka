@@ -1211,6 +1211,110 @@ test('R6 asetukset: sisäiset avaimet (r6AutoName, r6ReplayDir) eivät kelpaa IP
   fs.rmSync(d, { recursive: true, force: true });
 });
 
+// ---- R6: RP-muutos per ranked-ottelu (r6-rank, Arenyzen rank-historia) ------------------------------------------
+const R6RK = require('../src/main/r6-rank');
+const pad2 = (n) => String(n).padStart(2, '0');
+// Tallenteen aikaleima on paikallinen kellonaika 'Z':lla merkittynä: muotoillaan ms -> paikallinen seinäkello + 'Z'.
+const wallZ = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}Z`; };
+// Ottelu, joka päättyy hetkellä endMs: viimeisen kierroksen alku (paikallisena) = loppu - 4 min.
+function rkMatch(name, endMs, type = 'Ranked', own = true) {
+  const m = fxMatch(name, endMs - 30 * 60000, type, 'Bank', 0, [2, 1], [[own ? R6ME : 'muu', 0, 5, 4, 2, 3], ['a', 1, 3, 3, 1, 3]], [[1, 0, 0, 'Attack', 'Defense']]);
+  m.lastRoundTimestamp = wallZ(endMs - 4 * 60000);
+  return m;
+}
+const RK0 = Date.UTC(2026, 9, 26, 12);
+const RKM = 60000;
+const rkHist = (...pairs) => pairs.map(([t, rp]) => ({ ts: RK0 + t * RKM, rp }));
+
+test('R6 RP: yksi oma ranked-ottelu välillä -> delta, ennen ja jälkeen (myös tappio ja epäjärjestyksessä oleva historia)', () => {
+  const m = [rkMatch('Match-A', RK0 + 30 * RKM)];
+  const r = R6RK.attachRpDeltas(m, rkHist([0, 2500], [45, 2523]), { ownId: R6ME });
+  assert.deepStrictEqual(r.get('Match-A'), { rpBefore: 2500, rpAfter: 2523, rpDelta: 23 });
+  const loss = R6RK.attachRpDeltas(m, rkHist([45, 2481], [0, 2500]), { ownId: R6ME });
+  assert.deepStrictEqual(loss.get('Match-A'), { rpBefore: 2500, rpAfter: 2481, rpDelta: -19 });
+});
+test('R6 RP: useita otteluita peräkkäin, kukin omalla välillään', () => {
+  const m = [rkMatch('Match-A', RK0 + 30 * RKM), rkMatch('Match-B', RK0 + 90 * RKM), rkMatch('Match-C', RK0 + 150 * RKM)];
+  const r = R6RK.attachRpDeltas(m, rkHist([0, 2500], [40, 2520], [100, 2502], [160, 2530]), { ownId: R6ME });
+  assert.deepStrictEqual([r.get('Match-A').rpDelta, r.get('Match-B').rpDelta, r.get('Match-C').rpDelta], [20, -18, 28]);
+});
+test('R6 RP: kaksi ottelua saman välin sisällä -> ei deltaa kummallekaan (ei arvailua)', () => {
+  const m = [rkMatch('Match-A', RK0 + 20 * RKM), rkMatch('Match-B', RK0 + 50 * RKM), rkMatch('Match-C', RK0 + 130 * RKM)];
+  const r = R6RK.attachRpDeltas(m, rkHist([0, 2500], [60, 2540], [140, 2560]), { ownId: R6ME });
+  assert.strictEqual(r.has('Match-A'), false); assert.strictEqual(r.has('Match-B'), false);
+  assert.strictEqual(r.get('Match-C').rpDelta, 20, 'seuraava väli, jolla on vain yksi ottelu, saa deltan');
+});
+test('R6 RP: ei-ranked, "et ollut mukana", poissuljettu (käynnissä oleva) ja ottelu ilman väliä -> ei deltaa', () => {
+  const h = rkHist([0, 2500], [45, 2523]);
+  const opts = { ownId: R6ME };
+  assert.strictEqual(R6RK.attachRpDeltas([rkMatch('Match-U', RK0 + 30 * RKM, 'Unranked')], h, opts).size, 0);
+  assert.strictEqual(R6RK.attachRpDeltas([rkMatch('Match-Q', RK0 + 30 * RKM, 'QuickMatch')], h, opts).size, 0);
+  assert.strictEqual(R6RK.attachRpDeltas([rkMatch('Match-X', RK0 + 30 * RKM, 'Ranked', false)], h, opts).size, 0);
+  assert.strictEqual(R6RK.attachRpDeltas([rkMatch('Match-L', RK0 + 30 * RKM)], h, { ownId: R6ME, excludeName: 'Match-L' }).size, 0);
+  assert.strictEqual(R6RK.attachRpDeltas([rkMatch('Match-E', RK0 - 10 * RKM)], h, opts).size, 0, 'ennen ensimmäistä historiapistettä (ei "ennen"-arvoa)');
+  assert.strictEqual(R6RK.attachRpDeltas([rkMatch('Match-F', RK0 + 60 * RKM)], h, opts).size, 0, 'viimeisen historiapisteen jälkeen');
+  assert.strictEqual(R6RK.attachRpDeltas([rkMatch('Match-A', RK0 + 30 * RKM)], h, { ownId: '' }).size, 0);
+});
+test('R6 RP: historiapiste yli 3 h ottelun päättymisen jälkeen -> ei deltaa; täsmälleen 3 h kelpaa', () => {
+  const m = [rkMatch('Match-A', RK0 + 30 * RKM)];
+  assert.strictEqual(R6RK.attachRpDeltas(m, rkHist([0, 2500], [30 + 181, 2523]), { ownId: R6ME }).size, 0);
+  assert.strictEqual(R6RK.attachRpDeltas(m, rkHist([0, 2500], [30 + 180, 2523]), { ownId: R6ME }).size, 1);
+  assert.strictEqual(R6RK.attachRpDeltas(m, rkHist([0, 2500], [30 + 120, 2523]), { ownId: R6ME, maxLagMs: 60 * RKM }).size, 0, 'maxLagMs-asetus');
+});
+test('R6 RP: ei historiaa / liian vähän pisteitä / roskaa -> tyhjä tulos ilman virhettä', () => {
+  const m = [rkMatch('Match-A', RK0 + 30 * RKM)];
+  for (const h of [undefined, null, [], rkHist([0, 2500]), 'x', [null, { ts: 'a', rp: 1 }, { ts: 1 }]]) {
+    assert.strictEqual(R6RK.attachRpDeltas(m, h, { ownId: R6ME }).size, 0);
+  }
+  assert.strictEqual(R6RK.attachRpDeltas(null, rkHist([0, 1], [10, 2]), { ownId: R6ME }).size, 0);
+  assert.strictEqual(R6RK.attachRpDeltas(m, rkHist([0, 1], [10, 2])).size, 0);
+});
+test('R6 RP: aikaleima on paikallinen kellonaika Z:lla (ei UTC); mtime ensisijainen kun se täsmää', () => {
+  // Kansio Match-2026-10-26_17-55-02 = paikallinen aika; viimeisen kierroksen alku "2026-10-26T18:26:51Z" = paikallinen 18:26:51.
+  const localStart = new Date(2026, 9, 26, 18, 26, 51).getTime();
+  assert.strictEqual(R6RK.localWallMs('2026-10-26T18:26:51Z'), localStart);
+  assert.strictEqual(R6RK.localWallMs('2026-10-26T18:26:51'), localStart);
+  assert.ok(Number.isNaN(R6RK.localWallMs('roska')) && Number.isNaN(R6RK.localWallMs(undefined)));
+  const m = { timestamp: '2026-10-26T17:56:23Z', lastRoundTimestamp: '2026-10-26T18:26:51Z' };
+  assert.strictEqual(R6RK.matchEndMs(m, 0), localStart + 4 * 60000, 'ilman mtimea: paikallinen viimeisen kierroksen alku + 4 min');
+  assert.strictEqual(R6RK.matchEndMs(m, localStart + 3 * 60000), localStart + 3 * 60000, 'mtime täsmää (3 min kierroksen alusta) -> mtime');
+  assert.strictEqual(R6RK.matchEndMs(m, localStart + 5 * 3600000), localStart + 4 * 60000, 'mtime kaukana (kopioitu/koskettu myöhemmin) -> paikallinen aika');
+  assert.strictEqual(R6RK.matchEndMs({ timestamp: '2026-10-26T17:56:23Z' }, 0), new Date(2026, 9, 26, 17, 56, 23).getTime() + 4 * 60000, 'ilman lastRoundTimestampia: timestamp');
+  assert.strictEqual(R6RK.matchEndMs({}, 12345), 12345, 'pelkkä mtime kelpaa');
+  assert.strictEqual(R6RK.matchEndMs({}, 0), 0);
+});
+test('R6 RP: delta löytyy oikeasta UTC-hetkestä, vaikka tallenteen "Z"-aikaleima on paikallista aikaa (mtime puuttuu)', () => {
+  const end = Date.UTC(2026, 9, 26, 15, 30); // oikea UTC-hetki
+  const m = rkMatch('Match-A', end);            // lastRoundTimestamp = paikallinen seinäkello + 'Z'
+  const r = R6RK.attachRpDeltas([m], [{ ts: end - 40 * RKM, rp: 3000 }, { ts: end + 5 * RKM, rp: 3021 }], { ownId: R6ME });
+  assert.strictEqual(r.get('Match-A').rpDelta, 21);
+});
+test('R6 RP: mtimes-kartta (Map tai olio) kelpaa, kun se täsmää; muuten käytetään seinäkelloa', () => {
+  const m = rkMatch('Match-A', RK0 + 30 * RKM);
+  const h = rkHist([0, 2500], [45, 2523]);
+  assert.strictEqual(R6RK.attachRpDeltas([m], h, { ownId: R6ME, mtimes: { 'Match-A': RK0 + 33 * RKM } }).get('Match-A').rpDelta, 23);
+  assert.strictEqual(R6RK.attachRpDeltas([m], h, { ownId: R6ME, mtimes: new Map([['Match-A', RK0 + 33 * RKM]]) }).get('Match-A').rpDelta, 23);
+  // mtime 50 min seinäkellosta -> yli 20 min, käytetään seinäkelloa (30 + 4 min) -> delta säilyy
+  assert.strictEqual(R6RK.attachRpDeltas([m], h, { ownId: R6ME, mtimes: { 'Match-A': RK0 + 80 * RKM } }).get('Match-A').rpDelta, 23);
+});
+test('R6 RP: r6-service liittää RP-muutoksen ottelulistaan vain kun historia annetaan', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'st-r6rp-'));
+  const m1 = rkMatch('Match-2026-10-26_17-55-02', RK0 + 30 * RKM), m2 = rkMatch('Match-2026-10-26_18-55-02', RK0 + 100 * RKM, 'Unranked');
+  const rec = (m, end) => ({ v: R6Svc.STORE_VERSION, sig: 'x', lastMtime: end, parsedAt: end, summary: m });
+  fs.writeFileSync(path.join(dir, 'r6-matches.json'), JSON.stringify({ version: R6Svc.STORE_VERSION, matches: { [m1.name]: rec(m1, RK0 + 32 * RKM), [m2.name]: rec(m2, RK0 + 102 * RKM) } }));
+  const svc = R6Svc.createR6Service({ dataDir: dir, getSettings: () => ({ suspicionSensitivity: 'normal', r6Name: '', r6AutoName: false, r6ReplayDir: '' }), setSettings() {}, onChange() {}, lib: {} });
+  assert.ok(svc.matches({}).items.every((i) => i.rp === null), 'ilman historiaa ei RP-chipejä');
+  const h = rkHist([0, 2500], [45, 2523], [120, 2530]);
+  const items = svc.matches({}, { rpHistory: h }).items;
+  const a = items.find((i) => i.name === m1.name), b = items.find((i) => i.name === m2.name);
+  assert.deepStrictEqual(a.rp, { rpBefore: 2500, rpAfter: 2523, rpDelta: 23 });
+  assert.strictEqual(b.rp, null, 'Unranked ei saa deltaa');
+  assert.strictEqual(svc.matches({}, { rpHistory: h }).items.find((i) => i.name === m1.name).rp.rpDelta, 23, 'toinen kutsu (muistista)');
+  assert.deepStrictEqual(a.own.operators, [{ name: 'Ash', rounds: 3 }]);
+  assert.strictEqual(a.own.entryKills, null, 'ilman adv-dataa entry puuttuu');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 // ---- Pelaajaprofiilit, "Edellinen"-merkki ja lobbyistunnot (r6-stats, rl-core, ow-lobbies, game-detect) -------------------
 const Lob = require('../src/main/ow-lobbies');
 const GD = require('../src/main/game-detect');

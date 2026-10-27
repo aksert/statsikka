@@ -1334,6 +1334,29 @@ exports.run = async function run(win, app, probe, hooks) {
         !!v.querySelector('.r6-scorebar') && d.classList.contains('waiting') && !d.classList.contains('connected') && d.title.includes('ei ottelua');
     })()`);
     await shot('r6-odottaa-kierrosta');
+    await check('R6 > Ottelut: ottelukortit (tulosluokka ja vasen palkki, kartta, "Tulos a–b", K/D- ja HS-teksti, operaattorit) sekä yhteenvetorivi (V–H, voitto-%, K/D)', `(async () => {
+      ${go('r6', 'Ottelut')}; const v = window.__t.vis();
+      if (!(await window.__t.until(() => v.querySelectorAll('.r6-match-card').length === 3 && v.querySelector('.r6-match-summary'), 8000))) return false;
+      const items = (await window.api.r6Matches({})).data.items;
+      const cards = [...v.querySelectorAll('.r6-match-card')];
+      const want = { win: 'm-win', loss: 'm-loss', live: 'm-live' };
+      for (let i = 0; i < cards.length; i++) {
+        const c = cards[i], m = items[i];
+        const cls = want[m.result] || 'm-na';
+        if (!c.classList.contains(cls) || c.querySelector('.match-head').dataset.name !== m.name) return false;
+        if (getComputedStyle(c).borderLeftWidth !== '5px') return false;
+        const res = c.querySelector('.rmc-result').textContent;
+        if (!new RegExp('^(Voitto|Tappio|Tasapeli|Käynnissä|Ei tulosta) ' + m.score[0] + '–' + m.score[1] + '$').test(res)) return false;
+        if (!c.querySelector('.rmc-mapname').textContent.trim()) return false;
+        const st = c.querySelector('.rmc-stats').textContent;
+        if (m.own ? !(st.includes('K/D') && st.includes('HS') && st.includes(m.own.kills + ' / ' + m.own.deaths)) : !st.includes('Et ollut mukana')) return false;
+        if (m.own && m.own.operators.length && !c.querySelector('.rmc-ops').textContent.trim()) return false;
+      }
+      const sum = v.querySelector('.r6-match-summary').textContent;
+      const mine = items.filter((m) => m.own && m.result !== 'live');
+      return ['Ottelut', 'V–H', 'Voitto-%', 'K/D'].every((t) => sum.includes(t)) && sum.includes(mine.filter((m) => m.result === 'win').length + '–' + mine.filter((m) => m.result === 'loss').length);
+    })()`);
+    await shot('r6-ottelut-kortit');
     await check('R6 > Ottelut: lista (3), rivin avaus näyttää pistetaulun ja kierrokset', `(async () => {
       ${go('r6', 'Ottelut')}; const v = window.__t.vis();
       if (!(await window.__t.until(() => v.querySelectorAll('.match-head').length === 3, 8000))) return false;
