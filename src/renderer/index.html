@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; connect-src 'self' ws://127.0.0.1:*">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Statsikka</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-game="me">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#0f2f2c"/>
+          <rect x="6" y="17" width="5" height="9" rx="1.5" fill="#14b8a6"/>
+          <rect x="13.5" y="11" width="5" height="15" rx="1.5" fill="#14b8a6"/>
+          <rect x="21" y="5" width="5" height="21" rx="1.5" fill="#5eead4"/>
+        </svg>
+        <span class="brand-name">Statsikka</span>
+      </div>
+      <nav class="nav" id="nav" aria-label="Pelit">
+        <button class="nav-item" data-game="me"><span class="dot"></span><span class="nav-label">Oma profiili</span></button>
+        <button class="nav-item" data-game="ow"><span class="dot"></span><span class="nav-label">Overwatch 2</span><span class="status-dot" id="ow-dot" title="Overwatch ei käynnissä"></span></button>
+        <button class="nav-item" data-game="rl"><span class="dot"></span><span class="nav-label">Rocket League</span><span class="status-dot" id="rl-dot" title="Ei yhteyttä"></span></button>
+        <button class="nav-item" data-game="r6"><span class="dot"></span><span class="nav-label">Rainbow Six Siege</span><span class="status-dot" id="r6-dot" title="Ei käynnissä olevaa ottelua"></span></button>
+      </nav>
+      <div class="spacer"></div>
+      <button class="nav-item" data-game="settings"><span class="dot"></span><span class="nav-label">Asetukset</span></button>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div class="tabs" id="tabs" role="tablist"></div>
+        <div class="notice" id="notice" hidden></div>
+      </header>
+      <section class="view" id="view"></section>
+    </main>
+  </div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <div id="modal-root"></div>
+
+  <script src="util.js"></script>
+  <script src="suspicion-ui.js"></script>
+  <script src="ow-profile.js"></script>
+  <script src="link-card.js"></script>
+  <script src="ow-lobby.js"></script>
+  <script src="r6-check.js"></script>
+  <script src="rl-live.js"></script>
+  <script src="player-panel.js"></script>
+  <script src="rl-player.js"></script>
+  <script src="rl-history.js"></script>
+  <script src="rl-players.js"></script>
+  <script src="chart.js"></script>
+  <script src="r6-ui.js"></script>
+  <script src="r6-arenyze.js"></script>
+  <script src="r6-own.js"></script>
+  <script src="r6-player.js"></script>
+  <script src="r6-live.js"></script>
+  <script src="r6-matches.js"></script>
+  <script src="r6-players.js"></script>
+  <script src="own-profile.js"></script>
+  <script src="settings-view.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

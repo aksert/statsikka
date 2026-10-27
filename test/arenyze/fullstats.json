@@ -1,0 +1,83 @@
+{
+  "_source": "Rakennettu r6.arenyze.com/api-docs -sivun esimerkkivastauksista: GET /r6/api/v2/fullstats (kääre) + Full Stats -esimerkin sisältö (platform_families_full_profiles, data.segments) + Operator Stats -esimerkin operaattorikentät (headshots, headshotPercent). Keinotekoinen, ei oikean pelaajan tietoja.",
+  "player": { "nameOnPlatform": "PlayerName", "platformType": "uplay" },
+  "filters": { "seasonYear": "all", "modes": "ranked" },
+  "fullStats": {
+    "seasonYear": "Y10S4",
+    "seasonNumber": 40,
+    "platformType": "uplay",
+    "sessionType": "ranked",
+    "operators": [
+      { "operator": "Twitch", "side": "Attacker", "roundsPlayed": 47, "winPercent": 29.79, "kd": 0.54, "headshotPercent": 57.89, "wins": 14, "losses": 33, "kills": 19, "deaths": 35, "headshots": 11, "matchesPlayed": 23 },
+      { "operator": "Ash", "side": "Attacker", "roundsPlayed": 212, "winPercent": 52.1, "kd": 1.21, "headshotPercent": 44.0, "kills": 150, "deaths": 124, "headshots": 66 },
+      { "operator": "Jager", "side": "Defender", "roundsPlayed": 180, "winPercent": 55.0, "kd": 0.98, "kills": 98, "deaths": 100, "headshots": 41 }
+    ],
+    "platform_families_full_profiles": [
+      {
+        "profile_id": "0c0b0000-0000-4000-8000-000000000001",
+        "board_ids_full_profiles": [
+          {
+            "board_id": "ranked",
+            "full_profiles": [
+              {
+                "season_id": 40,
+                "profile": {
+                  "rank": 18,
+                  "rank_points": 3300,
+                  "max_rank": 19,
+                  "max_rank_points": 3450,
+                  "kills": 1240,
+                  "deaths": 1180,
+                  "wins": 64,
+                  "losses": 51,
+                  "abandon": 2,
+                  "update_time": "2025-10-14T21:43:27.315Z"
+                },
+                "season_statistics": {
+                  "kills": 1240,
+                  "deaths": 1180,
+                  "match_outcomes": { "wins": 64, "losses": 51, "abandons": 2 }
+                }
+              }
+            ]
+          },
+          {
+            "board_id": "casual",
+            "full_profiles": [
+              { "season_id": 40, "profile": { "rank": 0, "rank_points": 0, "kills": 300, "deaths": 280, "wins": 20, "losses": 18, "abandon": 0 }, "season_statistics": { "kills": 300, "deaths": 280, "match_outcomes": { "wins": 20, "losses": 18, "abandons": 0 } } }
+            ]
+          }
+        ]
+      }
+    ],
+    "data": {
+      "platformInfo": { "platformSlug": "ubi", "platformUserId": "0c0b0000-0000-4000-8000-000000000001", "platformUserHandle": "PlayerName", "avatarUrl": "" },
+      "metadata": { "currentSeason": 40, "clearanceLevel": 312, "battlepassLevel": 45 },
+      "segments": [
+        {
+          "type": "season",
+          "attributes": { "season": 39, "gamemode": "pvp_ranked", "platform": "pc", "region": null, "sessionType": "ranked" },
+          "metadata": { "name": "Y10S3", "shortName": "Y10S3", "color": "#44ccc2", "rankType": "ranked" },
+          "stats": {
+            "matchesPlayed": { "value": 98, "displayValue": "98" },
+            "kills": { "value": 1010, "displayValue": "1,010" },
+            "kdRatio": { "value": 1.01, "displayValue": "1.01" },
+            "rankPoints": { "value": 3150, "displayValue": "3,150" }
+          }
+        },
+        {
+          "type": "season",
+          "attributes": { "season": 40, "gamemode": "pvp_ranked", "platform": "pc", "region": null, "sessionType": "ranked" },
+          "metadata": { "name": "Y10S4", "shortName": "Y10S4", "color": "#44ccc2", "rankType": "ranked" },
+          "stats": {
+            "matchesPlayed": { "value": 117, "displayValue": "117" },
+            "kills": { "value": 1240, "displayValue": "1,240" },
+            "kdRatio": { "value": 1.05, "displayValue": "1.05" },
+            "rankPoints": { "value": 3300, "displayValue": "3,300" }
+          }
+        }
+      ]
+    },
+    "totalsHoursPlayed": { "hours": 124, "totalMs": 446400000, "segmentsCounted": 1 }
+  }
+}

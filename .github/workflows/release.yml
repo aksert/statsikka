@@ -1,0 +1,157 @@
+name: Julkaisu
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+      - src/**
+      - assets/**
+      - build/**
+      - scripts/**
+      - .github/workflows/release.yml
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Kuivaharjoitus: rakenna vain, ala julkaise (tallentaa artefaktin)'
+        type: boolean
+        default: false
+
+# Yksi julkaisu kerrallaan, kesken olevaa ei keskeytetä
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Ei allekirjoitusta: builder ei etsi varmennetta (OW_CLI_* jätetään asettamatta)
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      DRY_RUN: ${{ inputs.dry_run }}
+      RELEASES_REPO: aksert/statsikka-releases
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      # Versio package.jsonista
+      - name: Lue versio
+        id: ver
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Versio: $VERSION"
+
+      # Onko julkaisu jo olemassa? Silloin loput vaiheet ohitetaan.
+      # Kuivaharjoituksessa tarkistusta ei tehdä: rakennetaan aina.
+      - name: Tarkista onko julkaisu jo olemassa
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Kuivaharjoitus: ohitetaan julkaisun olemassaolon tarkistus."
+            exit 0
+          fi
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Repo-salaisuus RELEASES_TOKEN puuttuu."
+            exit 1
+          fi
+          if OUT=$(gh release view "v$VERSION" --repo "$RELEASES_REPO" 2>&1); then
+            echo "Julkaisu v$VERSION on jo olemassa: ei rakenneta eikä julkaista."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif echo "$OUT" | grep -qi "release not found"; then
+            echo "Julkaisua v$VERSION ei ole: rakennetaan."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::gh release view epäonnistui: $OUT"
+            exit 1
+          fi
+
+      - name: Asenna riippuvuudet
+        if: steps.check.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Itsetesti
+        if: steps.check.outputs.skip != 'true'
+        run: node scripts/selftest.js
+
+      - name: Rakenna paketti
+        if: steps.check.outputs.skip != 'true'
+        run: npm run dist
+
+      # Kolme tiedostoa löytyy ja latest.yml:n versio täsmää
+      - name: Tarkista tuotokset
+        if: steps.check.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          for f in "dist/Statsikka-Setup-$VERSION.exe" "dist/Statsikka-Setup-$VERSION.exe.blockmap" "dist/latest.yml"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Puuttuu: $f"
+              exit 1
+            fi
+          done
+          YML_VERSION=$(sed -n 's/^version:[[:space:]]*//p' dist/latest.yml | tr -d "\"'\r" | head -n 1)
+          if [ "$YML_VERSION" != "$VERSION" ]; then
+            echo "::error::latest.yml versio '$YML_VERSION' != package.json '$VERSION'"
+            exit 1
+          fi
+          echo "Tuotokset kunnossa (versio $VERSION)."
+
+      # Muistiinpanot: release-notes/<versio>.md tai oletusteksti
+      - name: Kirjoita muistiinpanot
+        if: steps.check.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          NOTES="$RUNNER_TEMP/notes.md"
+          if [ -f "release-notes/$VERSION.md" ]; then
+            cp "release-notes/$VERSION.md" "$NOTES"
+          else
+            {
+              echo "Statsikka $VERSION. Asennettu Statsikka päivittyy automaattisesti."
+              echo
+              echo "Asennus: https://github.com/$RELEASES_REPO/releases/download/v$VERSION/Statsikka-Setup-$VERSION.exe"
+            } > "$NOTES"
+          fi
+          echo "NOTES_FILE=$NOTES" >> "$GITHUB_ENV"
+
+      - name: Julkaise
+        if: steps.check.outputs.skip != 'true' && env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            "dist/Statsikka-Setup-$VERSION.exe" \
+            "dist/Statsikka-Setup-$VERSION.exe.blockmap" \
+            "dist/latest.yml" \
+            --repo "$RELEASES_REPO" \
+            --title "Statsikka $VERSION" \
+            --notes-file "$NOTES_FILE"
+
+      # Kuivaharjoitus: vain artefakti
+      - name: Tallenna artefakti (kuivaharjoitus)
+        if: steps.check.outputs.skip != 'true' && env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: statsikka-${{ steps.ver.outputs.version }}
+          path: |
+            dist/Statsikka-Setup-${{ steps.ver.outputs.version }}.exe
+            dist/Statsikka-Setup-${{ steps.ver.outputs.version }}.exe.blockmap
+            dist/latest.yml
+          if-no-files-found: error
+          retention-days: 3

@@ -1,0 +1,58 @@
+{
+  "_source": "Rakennettu r6.arenyze.com/api-docs -sivun GET /r6/api/v2/profile -esimerkistä (player, stats, account, banned, seasons, history, meta) ja Seasonal Stats -esimerkin historiamuodosta ([aikaleima, { value, metadata:{ rank, imageUrl } }]); lisäpisteet keinotekoisia.",
+  "player": { "nameOnPlatform": "PlayerName", "platformType": "uplay", "platformFamilies": "pc" },
+  "stats": {
+    "platform_families_full_profiles": [
+      {
+        "profile_id": "0c0b0000-0000-4000-8000-000000000001",
+        "board_ids_full_profiles": [
+          {
+            "board_id": "ranked",
+            "full_profiles": [
+              {
+                "season_id": 40,
+                "profile": { "rank": 18, "rank_points": 3300, "max_rank": 19, "max_rank_points": 3450, "kills": 1240, "deaths": 1180, "wins": 64, "losses": 51, "abandon": 2, "update_time": "2025-10-14T21:43:27.315Z" },
+                "season_statistics": { "kills": 1240, "deaths": 1180, "match_outcomes": { "wins": 64, "losses": 51, "abandons": 2 } }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "account": {
+    "level": 312,
+    "xp": 0,
+    "profilePicture": "https://avatars.ubisoft.com/PLAYER_ID/default_146_146.png",
+    "profiles": [{ "platformType": "uplay", "nameOnPlatform": "PlayerName" }]
+  },
+  "banned": { "isBanned": false, "banAlerts": [] },
+  "seasons": {
+    "data": {
+      "platformInfo": {},
+      "metadata": { "currentSeason": 40, "clearanceLevel": 312 },
+      "segments": [
+        {
+          "type": "season",
+          "attributes": { "season": 40, "gamemode": "pvp_ranked", "platform": "pc", "region": null, "sessionType": "ranked" },
+          "metadata": { "name": "Y10S4", "shortName": "Y10S4", "color": "#44ccc2", "rankType": "ranked" },
+          "stats": { "matchesPlayed": { "value": 117, "displayValue": "117" }, "kills": { "value": 1240, "displayValue": "1,240" }, "kdRatio": { "value": 1.05, "displayValue": "1.05" }, "rankPoints": { "value": 3300, "displayValue": "3,300" } }
+        }
+      ]
+    }
+  },
+  "history": {
+    "data": {
+      "history": {
+        "metadata": { "key": "RankPoints", "name": "Rank Points", "description": null },
+        "data": [
+          ["2025-10-10T18:02:11.000+00:00", { "displayName": "Rank Points", "metadata": { "rank": "PLATINUM III", "imageUrl": "https://r6.arenyze.com/assets/img/r6_ranks_img/platinum-3.webp", "color": "#44ccc2" }, "value": 3180, "displayValue": "3,180", "displayType": "Number" }],
+          ["2025-10-12T20:15:40.000+00:00", { "displayName": "Rank Points", "metadata": { "rank": "PLATINUM III", "imageUrl": "https://r6.arenyze.com/assets/img/r6_ranks_img/platinum-3.webp", "color": "#44ccc2" }, "value": 3245, "displayValue": "3,245", "displayType": "Number" }],
+          ["2025-10-13T19:30:00.000+00:00", { "displayName": "Rank Points", "metadata": { "rank": "PLATINUM II", "imageUrl": "https://r6.arenyze.com/assets/img/r6_ranks_img/platinum-2.webp", "color": "#44ccc2" }, "value": 3310, "displayValue": "3,310", "displayType": "Number" }],
+          ["2025-10-14T21:43:27.315+00:00", { "displayName": "Rank Points", "metadata": { "rank": "PLATINUM II", "imageUrl": "https://r6.arenyze.com/assets/img/r6_ranks_img/platinum-2.webp", "color": "#44ccc2" }, "value": 3300, "displayValue": "3,300", "displayType": "Number" }]
+        ]
+      }
+    }
+  },
+  "meta": { "included": ["stats", "account", "banned", "seasons", "history"], "partial": false, "errors": {} }
+}

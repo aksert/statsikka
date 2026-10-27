@@ -1,0 +1,21 @@
+{
+  "_source": "r6.arenyze.com/api-docs: GET /r6/api/me/usage -esimerkkivastaus (plan vaihdettu freeksi, limit 2000).",
+  "plan": "free",
+  "limit": 2000,
+  "usage": {
+    "total_calls": 12345,
+    "maps_calls": 1200,
+    "operators_calls": 3400,
+    "weapons_calls": 850,
+    "skins_calls": 650,
+    "ranks_calls": 900,
+    "seasons_calls": 500,
+    "stats_calls": 3200,
+    "search_calls": 345,
+    "servicestatus_calls": 50,
+    "attachment_calls": 120,
+    "charms_calls": 130,
+    "debug_calls": 0,
+    "last_seen_at": "2025-10-15T22:39:38.636Z"
+  }
+}

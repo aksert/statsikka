@@ -1,0 +1,21 @@
+# Riippuvuudet ja rakennustuotokset
+node_modules/
+dist/
+.tmp/
+
+# Lokit
+*.log
+npm-debug.log*
+
+# Paikalliset salaisuudet ja ymparistotiedostot
+.env
+.env.*
+
+# Editori- ja kayttojarjestelmatiedostot
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# build/ (icon.ico, icon.png) pidetaan versionhallinnassa

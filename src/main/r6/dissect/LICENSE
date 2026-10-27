@@ -1,0 +1,41 @@
+MIT License
+
+Copyright (c) 2022 Benjamin Ryan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---------------------------------------------------------------------------
+
+Additional attribution (Y11S3 support)
+
+Format knowledge and table data for Y11S3 replays were taken from MIT-licensed forks of
+r6-dissect. Their LICENSE files are the unmodified MIT text above ("Copyright (c) 2022
+Benjamin Ryan", no further copyright notices); the logic below was re-implemented in
+JavaScript and verified against real Y11S3 replays:
+
+- Animuxs/r6-stats-app (MIT), dissect/scoreboard.go, header.go, operator_roles.go, map_string.go:
+  scoreboard entity layout (entity id + round-start snapshot, field order), walk-back
+  snapshot detection, Solid Snake / Noor operator ids and roles, Fortress/Coastline/Villa/Tower Y10 map ids
+  (see scoreboard.js, tables.js).
+- prestonwillis10/r6-dissect (MIT), dissect/player.go, header.go: operator swap record layout
+  (23 <player object> F93911F2 08 <u64> 22 A9260BE4 08 <operator>) and operator ids
+  (see player.js, tables.js).
+- prestonwillis10/r6-dissect (MIT), dissect/defuse.go: Y10S4+ defuser packet layout (the timer is a property of the
+  acting player's pawn: 23 <pawn> 00000000 E58C06E9 / E9A37FEB, pawn -> slot link 1B <slot> 00000000 27C08DCA <pawn>,
+  run/state handling, 0.00 completion, sole-living-player fallback). Re-verified on Y11S3 replays (see defuse.js).

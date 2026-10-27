@@ -1,0 +1,185 @@
+{
+ "matchId": "fixture-match-1",
+ "timestamp": "2026-01-01T10:00:00Z",
+ "lastRoundTimestamp": "2026-01-01T10:05:00Z",
+ "map": {
+  "name": "Bank",
+  "id": 355496559878
+ },
+ "matchType": {
+  "name": "Ranked",
+  "id": 2
+ },
+ "gamemode": {
+  "name": "Bomb",
+  "id": 327933806
+ },
+ "gameVersion": "Y11S3",
+ "roundsPerMatch": 6,
+ "roundsParsed": 2,
+ "recordingProfileID": "pA",
+ "teams": [
+  {
+   "index": 0,
+   "name": "YOUR TEAM",
+   "score": 1,
+   "won": false
+  },
+  {
+   "index": 1,
+   "name": "ENEMY TEAM",
+   "score": 1,
+   "won": false
+  }
+ ],
+ "winnerTeamIndex": -1,
+ "ownTeamIndex": 0,
+ "result": "draw",
+ "players": [
+  {
+   "profileID": "pA",
+   "username": "A",
+   "teamIndex": 0,
+   "operators": [
+    {
+     "name": "Ash",
+     "id": 92270642656,
+     "role": "Attack",
+     "rounds": 1
+    },
+    {
+     "name": "Mute",
+     "id": 92270642318,
+     "role": "Defense",
+     "rounds": 1
+    }
+   ],
+   "kills": 3,
+   "deaths": 1,
+   "assists": 0,
+   "headshots": 2,
+   "hsPercent": 66.7,
+   "kd": 3,
+   "roundsPlayed": 2,
+   "kpr": 1.5,
+   "score": 0
+  },
+  {
+   "profileID": "pB",
+   "username": "B",
+   "teamIndex": 0,
+   "operators": [
+    {
+     "name": "Solid Snake",
+     "id": 444310693746,
+     "role": "Attack",
+     "rounds": 1
+    },
+    {
+     "name": "Jager",
+     "id": 92270642604,
+     "role": "Defense",
+     "rounds": 1
+    }
+   ],
+   "kills": 0,
+   "deaths": 1,
+   "assists": 0,
+   "headshots": 0,
+   "hsPercent": 0,
+   "kd": 0,
+   "roundsPlayed": 2,
+   "kpr": 0,
+   "score": 0
+  },
+  {
+   "profileID": "pC",
+   "username": "C",
+   "teamIndex": 1,
+   "operators": [
+    {
+     "name": "Mute",
+     "id": 92270642318,
+     "role": "Defense",
+     "rounds": 1
+    },
+    {
+     "name": "Ash",
+     "id": 92270642656,
+     "role": "Attack",
+     "rounds": 1
+    }
+   ],
+   "kills": 2,
+   "deaths": 1,
+   "assists": 0,
+   "headshots": 1,
+   "hsPercent": 50,
+   "kd": 2,
+   "roundsPlayed": 2,
+   "kpr": 1,
+   "score": 0
+  },
+  {
+   "profileID": "pD",
+   "username": "D",
+   "teamIndex": 1,
+   "operators": [
+    {
+     "name": "Jager",
+     "id": 92270642604,
+     "role": "Defense",
+     "rounds": 1
+    },
+    {
+     "name": "Ash",
+     "id": 92270642656,
+     "role": "Attack",
+     "rounds": 1
+    }
+   ],
+   "kills": 0,
+   "deaths": 2,
+   "assists": 0,
+   "headshots": 0,
+   "hsPercent": 0,
+   "kd": 0,
+   "roundsPlayed": 2,
+   "kpr": 0,
+   "score": 0
+  }
+ ],
+ "operatorSwapCount": 0,
+ "rounds": [
+  {
+   "roundNumber": 0,
+   "operatorSwaps": [],
+   "site": "1F Lobby",
+   "score": [
+    1,
+    0
+   ],
+   "winnerTeamIndex": 0,
+   "winCondition": "KilledOpponents",
+   "teamRoles": [
+    "Attack",
+    "Defense"
+   ]
+  },
+  {
+   "roundNumber": 1,
+   "operatorSwaps": [],
+   "site": "1F Lobby",
+   "score": [
+    1,
+    1
+   ],
+   "winnerTeamIndex": 1,
+   "winCondition": "DefusedBomb",
+   "teamRoles": [
+    "Defense",
+    "Attack"
+   ]
+  }
+ ]
+}

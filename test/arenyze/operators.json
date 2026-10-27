@@ -1,0 +1,15 @@
+{
+  "_source": "r6.arenyze.com/api-docs: GET /r6/api/v2/operators -esimerkki (kääre) + lisärivejä keinotekoisesti.",
+  "player": { "nameOnPlatform": "PlayerName", "platformType": "uplay" },
+  "filters": { "seasonYear": "Y11S3", "modes": "ranked" },
+  "operators": {
+    "seasonYear": "Y11S3",
+    "seasonNumber": 43,
+    "platformType": "uplay",
+    "sessionType": "ranked",
+    "operators": [
+      { "operator": "Twitch", "side": "Attacker", "roundsPlayed": 47, "kd": 1.08, "kills": 38, "deaths": 35 },
+      { "operator": "Mute", "side": "Defender", "roundsPlayed": 90, "kd": 0.9, "kills": 45, "deaths": 50 }
+    ]
+  }
+}

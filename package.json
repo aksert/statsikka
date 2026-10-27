@@ -1,0 +1,86 @@
+{
+  "name": "statsikka",
+  "productName": "Statsikka",
+  "version": "1.2.0",
+  "description": "Statsikka: pelitilastojen seuranta (Overwatch 2, Rocket League, Rainbow Six Siege ottelutallenteista)",
+  "main": "src/main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/start.js",
+    "mock-rl": "node scripts/mock-rl.js",
+    "test": "node scripts/selftest.js",
+    "smoke": "node scripts/start.js --smoke-test",
+    "dist": "ow-electron-builder --win nsis --x64 --publish never",
+    "icons": "node scripts/make-icons.js"
+  },
+  "overwolf": {
+    "packages": [
+      "gep"
+    ]
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@overwolf/ow-electron": "44.9.0",
+    "@overwolf/ow-electron-builder": "26.9.3",
+    "@overwolf/ow-electron-packages-types": "1.1.13",
+    "electron": "^45.0.0",
+    "ws": "^8.22.0"
+  },
+  "build": {
+    "appId": "fi.akseli.statsikka",
+    "productName": "Statsikka",
+    "copyright": "Statsikka",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json",
+      "scripts/gep-sim.js",
+      "test/arenyze/**/*",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "overwolf": {
+      "requireSigning": false
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "perMachine": false,
+      "artifactName": "Statsikka-Setup-${version}.${ext}",
+      "shortcutName": "Statsikka",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "aksert",
+        "repo": "statsikka-releases",
+        "releaseType": "release"
+      }
+    ],
+    "toolsets": {
+      "winCodeSign": "1.1.0"
+    }
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  }
+}
